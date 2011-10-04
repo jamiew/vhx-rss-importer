@@ -1,0 +1,4 @@
+server: api.vhx.tv
+frequency: 600
+feeds:
+- {url: "http://laughingsquid.com/rss", username: laughingsquid, api_token: l000000ngcat}

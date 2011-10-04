@@ -1,0 +1,26 @@
+h2. VHX RSS Importer
+
+Parses YouTube and Vimeo embeds from a RSS feed and shares them to a "VHX.TV":http://vhx.tv account
+
+It looks in the @description@, @content:encoded@, and MediaRSS fields.
+
+Built using code from the "VHX Tumblr Importer":http://github.com/jamiew/vhx-tumblr-importer
+
+
+h2. Usage
+
+Copy @config.sample.yml@ to @config.yml@ and customize
+
+pre. $ bundle install
+$ ruby tumblr.rb
+
+
+h2. Contributors
+
+* "Jamie Wilkinson":http://jamiedubs.com ("@jamiew":http://github.com/jamiew)
+
+
+h2. License
+
+Released under an MIT license. Pull requests welcome.
+
