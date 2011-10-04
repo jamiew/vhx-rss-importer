@@ -21,24 +21,11 @@ class RssScraper
     unless config['url'] && config['username'] && config['api_token']
       raise "blog config is incomplete: url, username, api_token are required. config => #{config.inspect}"
     end
+
     @config = config
-  end
-
-  def config
-    @config
-  end
-
-  def login
-    raise "No config loaded" if @config.nil?
-    config['username']
-  end
-
-  def api_token
-    config['api_token']
-  end
-
-  def blog_url
-    config['url'] =~ /^http\:\/\// ? config['url'] : "http://#{config['url']}"
+    @login = @config['username']
+    @api_token = @config['api_token']
+    @blog_url =~ /^http\:\/\// ? @config['url'] : "http://#{@config['url']}"
   end
 
   def agent
@@ -62,8 +49,8 @@ class RssScraper
 
   # FIXME really don't this here "storage mechanism"
   def last_seen_filename
-    # "last_seen_url_#{config['url'].gsub('.','-').gsub('/','-')}"
-    "last_seen_url_#{Digest::MD5.hexdigest(config['url'])}"
+    # "last_seen_url_#{@config['url'].gsub('.','-').gsub('/','-')}"
+    "last_seen_url_#{Digest::MD5.hexdigest(@blog_url)}"
   end
 
   def last_seen_time
@@ -113,7 +100,7 @@ class RssScraper
 
   def share_video(video)
     log_video(video)
-    url = "http://#{$global_config['server']}/videos/share.xml?app_id=vhx_channels&login=#{login}&api_token=#{api_token}"
+    url = "http://#{$global_config['server']}/videos/share.xml?app_id=vhx_channels&login=#{@login}&api_token=#{@api_token}"
     puts "url => #{url.inspect}"
     agent.post(url, video)
     set_last_seen_url(video[:found_on_url])
@@ -185,7 +172,7 @@ class RssScraper
   def update
     data = fetch_posts(blog_url)
     if data.nil? || data.empty?
-      STDERR.puts "No data in response! config=#{config.inspect}"
+      STDERR.puts "No data in response! @config=#{@config.inspect}"
       return nil
     end
 
