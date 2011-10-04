@@ -150,8 +150,9 @@ class RssScraper
 
   def videos_from_rss_item(item)
     content = (item/'content|encoded')[0].content
-    # TODO strip cdata and parse again; then grab object/embed/iframe tags
-    comment = (item/'description')[0].content # TODO need to HTML decode
+    # TODO strip cdata and parse content again; then grab object/embed/iframe tags
+    # TODO need to HTML decode this comment before posting..?
+    comment = @config['descriptions'].to_s == 'false' ? nil : (item/'description')[0].content
     found_on_url = expand_url((item/'link')[0].content)
     shared_at = Time.now # TODO
 
