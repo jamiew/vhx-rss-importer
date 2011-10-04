@@ -154,29 +154,8 @@ class RssScraper
     end
   end
 
-  # def videos_from_json(json)
-  #   @coder ||= HTMLEntities.new
-  #   posts = json['posts'].select{|p| p['type'] == 'video' }
-  #   posts.map{|v|
-  #     # strip html & decode entities in comments
-  #     comment = v['video-caption'].gsub(/<(\/|\s)*[^(#{[].join('|') << '|\/'})][^>]*>/,'').gsub(/(<[A-Z].*)$/i, '')
-  #     comment = comment[0..250]+"..." if comment && comment.length > 200
-  #     shared_at = Time.at(v['unix-timestamp'])
-  #     {
-  #       :url => identify_embeds(v['video-source']),
-  #       :found_on_url => v['url-with-slug'],
-  #       :share_comment => @coder.decode(comment),
-  #       :shared_at => shared_at,
-  #       :shared_by => json['tumblelog'] && json['tumblelog']['name'],
-  #       # TODO author name vs just username?
-  #       :tags => v['tags'] && v['tags'].join(','),
-  #     }
-  #   }.compact
-  # end
-
   def videos_from_rss(data)
     doc = Nokogiri::XML.parse(data)
-    # doc.remove_namespaces! # Hack to support content:encoded without declaration
     videos = (doc/'item').map {|item| videos_from_rss_item(item) }.flatten.compact
   end
 
@@ -184,7 +163,7 @@ class RssScraper
     content = (item/'content|encoded')[0].content
     # TODO strip cdata and parse again; then grab object/embed/iframe tags
     comment = (item/'description')[0].content # TODO need to HTML decode
-    found_on_url = (item/'link')[0].content
+    found_on_url = expand_url((item/'link')[0].content)
     shared_at = Time.now # TODO
 
     video_urls = identify_embeds(content) || []
@@ -192,6 +171,15 @@ class RssScraper
       {:url => url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
     end
     return output
+  end
+
+  def expand_url(url)
+    puts "expand_url(url=#{url.inspect})"
+    uri = agent.head(url).uri
+    parsed = uri.to_s.gsub(uri.query,'').gsub(/\?$/,'') # FIXME /\?#{uri.query}/ regex not working which is actually safe
+    puts " #{uri.query}"
+    puts " => #{parsed.inspect}"
+    parsed
   end
 
   def update
