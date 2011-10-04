@@ -2,4 +2,4 @@
 .DS_Store
 .gems
 config.yml
-last_seen_url
+last_seen_url*

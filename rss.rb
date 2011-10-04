@@ -3,6 +3,7 @@ require 'bundler/setup'
 require 'mechanize'
 require 'yaml'
 require 'htmlentities'
+require 'digest/md5'
 
 def dirname
   File.expand_path(File.dirname($0))
@@ -59,8 +60,10 @@ class RssScraper
     next
   end
 
+  # FIXME really don't this here "storage mechanism"
   def last_seen_filename
-    'last_seen_url'
+    # "last_seen_url_#{config['url'].gsub('.','-').gsub('/','-')}"
+    "last_seen_url_#{Digest::MD5.hexdigest(config['url'])}"
   end
 
   def last_seen_time
@@ -136,7 +139,6 @@ class RssScraper
       matches ||= /vimeo\.com\/(\d+)/.match(html)
       url = matches && "http://vimeo.com/#{matches[1]}"
     end
-    log matches.inspect
     return url
   end
 
@@ -167,6 +169,7 @@ class RssScraper
     shared_at = Time.now # TODO
 
     video_urls = identify_embeds(content) || []
+    log "#{found_on_url}: found #{video_urls.length} video(s)"
     output = video_urls.map do |url|
       {:url => url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
     end
