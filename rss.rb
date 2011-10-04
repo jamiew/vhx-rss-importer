@@ -174,11 +174,8 @@ class RssScraper
   end
 
   def expand_url(url)
-    puts "expand_url(url=#{url.inspect})"
     uri = agent.head(url).uri
     parsed = uri.to_s.gsub(uri.query,'').gsub(/\?$/,'') # FIXME /\?#{uri.query}/ regex not working which is actually safe
-    puts " #{uri.query}"
-    puts " => #{parsed.inspect}"
     parsed
   end
 
