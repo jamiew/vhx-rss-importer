@@ -28,8 +28,21 @@ class RssScraper
     @blog_url = (@config['url'] =~ /^http\:\/\// ? @config['url'] : "http://#{@config['url']}")
   end
 
+  def log(msg)
+    puts msg
+  end
+
+  def log_video(video)
+    msg = "\nSharing #{video[:url]}"
+    msg += " shared_at=#{video[:shared_at].inspect}" if video[:shared_at]
+    msg += " share_comment=#{video[:share_comment].inspect}" if video[:share_comment]
+    msg += " found_on_url=#{video[:found_on_url].inspect}"
+    log(msg)
+  end
+
   def agent
-    @agent ||= build_agent
+    # @agent ||= build_agent
+    build_agent # fresh each time
   end
 
   def build_agent
@@ -62,7 +75,9 @@ class RssScraper
   def last_seen_url
     return @last_seen_url if @last_seen_url
     last_seen_file = File.open("#{dirname}/#{last_seen_filename}") rescue nil
-    @last_seen_url = last_seen_file && last_seen_file.read || nil
+    @last_seen_url = last_seen_file && last_seen_file.read.strip.chomp || nil
+    @last_seen_url = nil if @last_seen_url.empty?
+    @last_seen_url
   end
 
   # For some reason this isn't being called as last_seen_url= ...
@@ -84,25 +99,14 @@ class RssScraper
     end
   end
 
-  def log(msg)
-    puts msg
-  end
-
-  def log_video(video)
-    msg = "\nSharing #{video[:url]}"
-    msg += " shared_at=#{video[:shared_at].inspect}" if video[:shared_at]
-    # msg += " share_comment=#{video[:share_comment].inspect}" if video[:share_comment]
-    msg += " found_on_url=#{video[:found_on_url].inspect}"
-    msg += " #{video[:score]} points" if video[:score]
-    msg += " tags=#{video[:tags]}" if video[:tags]
-    log(msg)
-  end
-
   def share_video(video)
     log_video(video)
     url = "http://#{$global_config['server']}/videos/share.xml?app_id=vhx_channels&login=#{@login}&api_token=#{@api_token}"
-    puts "share_video url => #{url.inspect}"
-    agent.post(url, video) unless @config['dry_run'].to_s == true
+    if @config['dry_run'].to_s == 'true'
+      log "DRY RUN, not posting..."
+    else
+      agent.post(url, video)
+    end
     set_last_seen_url(video[:found_on_url])
   rescue Mechanize::ResponseCodeError
     STDOUT.print "\n"
@@ -155,7 +159,7 @@ class RssScraper
         log "this is the last_seen_url, stopping here."
         break
       else
-        log "#{video[:found_on_url].inspect}: found video, #{video[:url].inspect}"
+        log "#{video[:found_on_url].inspect}: found video, #{video[:url].inspect} shared_at=#{video[:shared_at].inspect}"
         videos << video
       end
     }
@@ -172,7 +176,8 @@ class RssScraper
 
     original_url = (item/'link')[0].content
     found_on_url = expand_url(original_url).to_s.strip.chomp
-    shared_at = Time.now # TODO
+    pub_date = (item/'pubDate')[0].content
+    shared_at = Time.parse(pub_date)
 
     output = {:url => video_url, :original_url => original_url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
     return output
@@ -191,17 +196,10 @@ class RssScraper
       return nil
     end
 
-    # Sort and filter videos, truncating at last_seen_url
-    # FIXME we're doing this in the videos_from_rss() loop now, this is redundant
+    # Fetch and sort videos
+    # FIXME do we even need to resort...?
     videos = videos_from_rss(data)
-    puts "Checking for last-seen URL: #{last_seen_url.inspect}"
-    videos = videos.sort_by{|v| v[:shared_at] }.reverse
-    found_on_urls = videos.map{|c| c[:found_on_url] }
-    if last_seen_url && !last_seen_url.empty? && found_on_urls.index(last_seen_url)
-      puts "Matched! videos.length was #{videos.length}..."
-      videos = videos[0...found_on_urls.index(last_seen_url)]
-      puts "Truncated to #{videos.length}"
-    end
+    videos = videos.sort_by{|v| v[:shared_at] }
 
     if videos.length <= 0
       puts "Nothing to post! We're done here."
@@ -210,7 +208,7 @@ class RssScraper
 
     # Auth to VHX and share
     # Work backwards so most recent post is posted last, so it's on top
-    share_videos(videos.reverse)
+    share_videos(videos)
   end
 end
 
