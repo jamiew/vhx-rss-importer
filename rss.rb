@@ -145,31 +145,35 @@ class RssScraper
 
   def videos_from_rss(data)
     doc = Nokogiri::XML.parse(data)
-    videos = (doc/'item').map {|item| videos_from_rss_item(item) }.flatten.compact
+    log "videos_from_rss(): last_seen_url=#{last_seen_url.inspect}"
+    videos = []
+    (doc/'item').each {|item| 
+      video = videos_from_rss_item(item) 
+      if video.nil?
+        # log "No video found for #{(item/'link')[0].content}"
+      elsif video[:found_on_url] == last_seen_url
+        log "this is the last_seen_url, stopping here."
+        break
+      else
+        log "#{video[:found_on_url].inspect}: found video, #{video[:url].inspect}"
+        videos << video
+      end
+    }
+    videos.flatten.compact
   end
 
   def videos_from_rss_item(item)
     content = (item/'content|encoded')[0].content
     # TODO strip cdata and parse content again; then grab object/embed/iframe tags
     # TODO need to HTML decode this comment before posting..?
+    video_url = identify_embeds(content)
+    return nil if video_url.nil? || video_url.empty?
     comment = @config['descriptions'].to_s == 'false' ? nil : (item/'description')[0].content
-    original_url = (item/'link')[0].content
-    found_on_url = expand_url(original_url)
 
-    puts "last_seen_url=#{last_seen_url}"
-    if found_on_url.to_s.strip.chomp == last_seen_url.to_s.strip.chomp
-      log "this is the last_seen_url, stoppping"
-      exit 0
-    else
-      puts "*********"
-      puts "#{last_seen_url.strip.chomp.inspect}"
-      puts "#{found_on_url.strip.chomp.inspect}"
-    end
+    original_url = (item/'link')[0].content
+    found_on_url = expand_url(original_url).to_s.strip.chomp
     shared_at = Time.now # TODO
 
-    video_url = identify_embeds(content)
-    puts video_url.inspect
-    log "#{found_on_url.inspect}: found video, #{video_url.inspect}" if !video_url.nil?
     output = {:url => video_url, :original_url => original_url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
     return output
   end
@@ -188,6 +192,7 @@ class RssScraper
     end
 
     # Sort and filter videos, truncating at last_seen_url
+    # FIXME we're doing this in the videos_from_rss() loop now, this is redundant
     videos = videos_from_rss(data)
     puts "Checking for last-seen URL: #{last_seen_url.inspect}"
     videos = videos.sort_by{|v| v[:shared_at] }.reverse
