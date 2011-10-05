@@ -102,7 +102,7 @@ class RssScraper
     log_video(video)
     url = "http://#{$global_config['server']}/videos/share.xml?app_id=vhx_channels&login=#{@login}&api_token=#{@api_token}"
     puts "share_video url => #{url.inspect}"
-    # agent.post(url, video)
+    agent.post(url, video) unless @config['dry_run'].to_s == true
     set_last_seen_url(video[:found_on_url])
   rescue Mechanize::ResponseCodeError
     STDOUT.print "\n"
@@ -147,8 +147,8 @@ class RssScraper
     doc = Nokogiri::XML.parse(data)
     log "videos_from_rss(): last_seen_url=#{last_seen_url.inspect}"
     videos = []
-    (doc/'item').each {|item| 
-      video = videos_from_rss_item(item) 
+    (doc/'item').each {|item|
+      video = videos_from_rss_item(item)
       if video.nil?
         # log "No video found for #{(item/'link')[0].content}"
       elsif video[:found_on_url] == last_seen_url
