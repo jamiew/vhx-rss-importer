@@ -1,4 +1,4 @@
 source :rubygems
 
-gem 'mechanize'
+gem 'mechanize', '~> 1.0'
 gem 'htmlentities'
