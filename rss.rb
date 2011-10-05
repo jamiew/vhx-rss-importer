@@ -101,9 +101,9 @@ class RssScraper
   def share_video(video)
     log_video(video)
     url = "http://#{$global_config['server']}/videos/share.xml?app_id=vhx_channels&login=#{@login}&api_token=#{@api_token}"
-    puts "url => #{url.inspect}"
+    puts "share_video url => #{url.inspect}"
     # agent.post(url, video)
-    # set_last_seen_url(video[:found_on_url])
+    set_last_seen_url(video[:found_on_url])
   rescue Mechanize::ResponseCodeError
     STDOUT.print "\n"
     STDERR.puts "*** Error sharing video: #{$!.inspect} response=#{$!.page.body}"
@@ -131,7 +131,7 @@ class RssScraper
 
   def fetch_posts(url)
     begin
-      puts "Fetching #{url.inspect} ..."
+      puts "fetch_posts() #{url.inspect} ..."
       page = agent.get(url)
       return page.body
     rescue Mechanize::ResponseCodeError
@@ -153,13 +153,24 @@ class RssScraper
     # TODO strip cdata and parse content again; then grab object/embed/iframe tags
     # TODO need to HTML decode this comment before posting..?
     comment = @config['descriptions'].to_s == 'false' ? nil : (item/'description')[0].content
-    found_on_url = expand_url((item/'link')[0].content)
+    original_url = (item/'link')[0].content
+    found_on_url = expand_url(original_url)
+
+    puts "last_seen_url=#{last_seen_url}"
+    if found_on_url.to_s.strip.chomp == last_seen_url.to_s.strip.chomp
+      log "this is the last_seen_url, stoppping"
+      exit 0
+    else
+      puts "*********"
+      puts "#{last_seen_url.strip.chomp.inspect}"
+      puts "#{found_on_url.strip.chomp.inspect}"
+    end
     shared_at = Time.now # TODO
 
     video_url = identify_embeds(content)
     puts video_url.inspect
-    log "#{found_on_url}: found video, #{video_url.inspect}" if !video_url.nil?
-    output = {:url => video_url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
+    log "#{found_on_url.inspect}: found video, #{video_url.inspect}" if !video_url.nil?
+    output = {:url => video_url, :original_url => original_url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
     return output
   end
 
