@@ -25,7 +25,7 @@ class RssScraper
     @config = config
     @login = @config['username']
     @api_token = @config['api_token']
-    @blog_url =~ /^http\:\/\// ? @config['url'] : "http://#{@config['url']}"
+    @blog_url = (@config['url'] =~ /^http\:\/\// ? @config['url'] : "http://#{@config['url']}")
   end
 
   def agent
@@ -102,8 +102,8 @@ class RssScraper
     log_video(video)
     url = "http://#{$global_config['server']}/videos/share.xml?app_id=vhx_channels&login=#{@login}&api_token=#{@api_token}"
     puts "url => #{url.inspect}"
-    agent.post(url, video)
-    set_last_seen_url(video[:found_on_url])
+    # agent.post(url, video)
+    # set_last_seen_url(video[:found_on_url])
   rescue Mechanize::ResponseCodeError
     STDOUT.print "\n"
     STDERR.puts "*** Error sharing video: #{$!.inspect} response=#{$!.page.body}"
@@ -156,11 +156,10 @@ class RssScraper
     found_on_url = expand_url((item/'link')[0].content)
     shared_at = Time.now # TODO
 
-    video_urls = identify_embeds(content) || []
-    log "#{found_on_url}: found #{video_urls.length} video(s)"
-    output = video_urls.map do |url|
-      {:url => url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
-    end
+    video_url = identify_embeds(content)
+    puts video_url.inspect
+    log "#{found_on_url}: found video, #{video_url.inspect}" if !video_url.nil?
+    output = {:url => video_url, :found_on_url => found_on_url, :share_comment => comment, :shared_at => shared_at}
     return output
   end
 
@@ -171,7 +170,7 @@ class RssScraper
   end
 
   def update
-    data = fetch_posts(blog_url)
+    data = fetch_posts(@blog_url)
     if data.nil? || data.empty?
       STDERR.puts "No data in response! @config=#{@config.inspect}"
       return nil
@@ -206,6 +205,7 @@ end
 
 $global_config = load_config
 $global_config['blogs'].each do |opts|
+  puts opts.inspect
   blog = RssScraper.new(opts)
   blog.set_last_seen_url(nil) if ENV['CLOBBER'].to_s == '1' || ENV['FORCE'].to_s == '1'
   blog.update
