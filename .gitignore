@@ -3,3 +3,4 @@
 .gems
 config.yml
 last_seen_url*
+Rakefile
