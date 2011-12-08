@@ -185,7 +185,7 @@ class RssScraper
 
   def expand_url(url)
     uri = agent.head(url).uri
-    parsed = uri.to_s.gsub(uri.query,'').gsub(/\?$/,'') # FIXME /\?#{uri.query}/ regex not working which is actually safe
+    parsed = uri.to_s.gsub(uri.query.to_s,'').gsub(/\?$/,'') # FIXME /\?#{uri.query}/ regex not working which is actually safe
     parsed
   end
 
