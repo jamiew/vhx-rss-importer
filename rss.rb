@@ -138,7 +138,7 @@ class RssScraper
       puts "fetch_posts() #{url.inspect} ..."
       page = agent.get(url)
       return page.body
-    rescue Mechanize::ResponseCodeError
+    rescue Mechanize::ResponseCodeError, Timeout::Error
       STDERR.puts "Error fetching page: #{$!.inspect}"
       # TODO retry once or twice
       sleep 1
