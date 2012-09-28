@@ -54,10 +54,9 @@ class RssScraper
   def fetch_page(url, params={})
     agent.get(url, params)
   rescue Mechanize::ResponseCodeError
-    STDERR.puts "Error fetching page: #{$!.inspect}"
+    STDERR.puts "Error fetching page #{url.inspect} => #{$!.inspect}"
     # TODO retry once or twice
     sleep 1
-    next
   end
 
   # FIXME really don't this here "storage mechanism"
@@ -139,10 +138,9 @@ class RssScraper
       page = agent.get(url)
       return page.body
     rescue Mechanize::ResponseCodeError, Timeout::Error
-      STDERR.puts "Error fetching page: #{$!.inspect}"
+      STDERR.puts "Error fetching page #{url.inspect}: #{$!.inspect}"
       # TODO retry once or twice
       sleep 1
-      # exit 1
       return nil
     end
   end
@@ -184,7 +182,13 @@ class RssScraper
   end
 
   def expand_url(url)
-    uri = agent.head(url).uri
+    begin
+      uri = agent.head(url).uri
+    rescue Net::HTTPInternalServerError
+      STDERR.puts "500 Internal Server Error. url => #{url.inspect}"
+      uri = nil
+    end
+
     parsed = uri.to_s.gsub(uri.query.to_s,'').gsub(/\?$/,'') # FIXME /\?#{uri.query}/ regex not working which is actually safe
     parsed
   end
